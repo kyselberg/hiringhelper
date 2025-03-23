@@ -1,4 +1,4 @@
-import { H3Event } from 'h3';
+import { H3Event, getCookie, setCookie } from 'h3';
 import jwt from 'jsonwebtoken';
 
 const JWT_SECRET = process.env.JWT_SECRET as string;
@@ -6,7 +6,7 @@ if (!JWT_SECRET) {
   throw new Error('JWT_SECRET environment variable is not defined');
 }
 
-const COOKIE_NAME = 'auth_token';
+export const COOKIE_NAME = 'auth_token';
 const COOKIE_OPTIONS = {
   httpOnly: true,
   secure: process.env.NODE_ENV === 'production',
@@ -21,24 +21,18 @@ export interface JWTPayload {
 }
 
 export function setAuthCookie(event: H3Event, token: string): void {
-  event.node.res.setHeader('Set-Cookie', `${COOKIE_NAME}=${token}; ${Object.entries(COOKIE_OPTIONS)
-    .map(([key, value]) => `${key}=${value}`)
-    .join('; ')}`);
+  setCookie(event, COOKIE_NAME, token, COOKIE_OPTIONS);
 }
 
 export function removeAuthCookie(event: H3Event): void {
-  event.node.res.setHeader('Set-Cookie', `${COOKIE_NAME}=; ${Object.entries({
+  setCookie(event, COOKIE_NAME, '', {
     ...COOKIE_OPTIONS,
     maxAge: 0
-  }).map(([key, value]) => `${key}=${value}`).join('; ')}`);
+  });
 }
 
 export function getAuthCookie(event: H3Event): string | undefined {
-  const cookies = event.node.req.headers.cookie;
-  if (!cookies) return undefined;
-
-  const cookie = cookies.split(';').find(c => c.trim().startsWith(`${COOKIE_NAME}=`));
-  return cookie ? cookie.split('=')[1] : undefined;
+  return getCookie(event, COOKIE_NAME);
 }
 
 export function generateToken(payload: JWTPayload): string {

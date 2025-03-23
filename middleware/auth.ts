@@ -11,18 +11,14 @@ export default defineNuxtRouteMiddleware(async (to) => {
 
   try {
     // Verify authentication using the server-side verify endpoint
-    const response = await fetch('/api/auth/verify', {
+    await $fetch('/api/auth/verify', {
       credentials: 'include', // This is crucial for sending cookies
     });
 
-    if (!response.ok) {
-      // If verification fails, redirect to login
-      return navigateTo({
-        path: '/login',
-        query: { redirect: to.fullPath }
-      });
-    }
+    // If we get here, the verification was successful
+    return;
   } catch (error) {
+    console.error('Auth verification error:', error);
     // If there's an error (e.g., network error), redirect to login
     return navigateTo({
       path: '/login',

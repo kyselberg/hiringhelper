@@ -1,6 +1,6 @@
-import { createError, defineEventHandler } from 'h3';
+import { createError, defineEventHandler, getCookie } from 'h3';
 import { UserModel } from '../../models/user.model';
-import { getAuthCookie, verifyToken } from '../../utils/auth';
+import { COOKIE_NAME, verifyToken } from '../../utils/auth';
 
 interface VerifyResponse {
   user: {
@@ -12,7 +12,7 @@ interface VerifyResponse {
 
 export default defineEventHandler(async (event): Promise<VerifyResponse> => {
   try {
-    const token = getAuthCookie(event);
+    const token = getCookie(event, COOKIE_NAME);
     if (!token) {
       throw createError({
         statusCode: 401,
