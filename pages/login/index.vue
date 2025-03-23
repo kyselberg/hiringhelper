@@ -35,11 +35,11 @@ const handleSubmit = async () => {
     }
 
     // Store token in localStorage
-    localStorage.setItem('token', data.token);
-    localStorage.setItem('user', JSON.stringify(data.user));
+    localStorage.setItem('token', data.body.token);
+    localStorage.setItem('user', JSON.stringify(data.body.user));
 
     // Redirect to dashboard
-    router.push('/dashboard');
+    // router.push('/dashboard');
   } catch (err: unknown) {
     error.value = err instanceof Error ? err.message : 'Login failed';
   } finally {
