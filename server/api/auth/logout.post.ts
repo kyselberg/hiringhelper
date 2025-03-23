@@ -1,4 +1,4 @@
-import { defineEventHandler } from 'h3';
+import { createError, defineEventHandler } from 'h3';
 import { removeAuthCookie } from '../../utils/auth';
 
 export default defineEventHandler(async (event) => {
@@ -11,9 +11,9 @@ export default defineEventHandler(async (event) => {
     };
   } catch (error) {
     console.error('Logout error:', error);
-    return {
+    throw createError({
       statusCode: 500,
-      body: { message: 'Internal server error' }
-    };
+      message: 'Internal server error'
+    });
   }
 });

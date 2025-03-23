@@ -3,10 +3,12 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useAuthStore } from '@/stores/auth';
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 
 const router = useRouter();
+const authStore = useAuthStore();
 const email = ref('');
 const password = ref('');
 const name = ref('');
@@ -36,13 +38,13 @@ const handleSubmit = async () => {
       throw new Error(data.message || 'Registration failed');
     }
 
-    console.log('data =>', data);
-    // Store token in localStorage
-    localStorage.setItem('token', data.body.token);
-    localStorage.setItem('user', JSON.stringify(data.body.user));
+    // Store auth data in the store
+    authStore.setToken(data.body.token);
+    authStore.setUser(data.body.user);
 
-    // Redirect to dashboard
-    // router.push('/dashboard');
+    // Redirect to dashboard or stored redirect path
+    const redirectPath = authStore.redirectPath || '/dashboard';
+    router.push(redirectPath);
   } catch (err: unknown) {
     error.value = err instanceof Error ? err.message : 'Registration failed';
   } finally {
