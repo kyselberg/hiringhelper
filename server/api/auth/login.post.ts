@@ -1,8 +1,6 @@
 import { defineEventHandler, readBody } from 'h3';
-import jwt from 'jsonwebtoken';
 import { UserModel } from '../../models/user.model';
-
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+import { generateToken, setAuthCookie } from '../../utils/auth';
 
 export default defineEventHandler(async (event) => {
   try {
@@ -11,9 +9,7 @@ export default defineEventHandler(async (event) => {
     // Find user by email
     const user = await UserModel.findByEmail(email);
 
-    console.log('user =>', user);
-
-    if (!user) {
+    if (!user || !user._id) {
       return {
         statusCode: 401,
         body: { message: 'Invalid email or password' }
@@ -29,17 +25,16 @@ export default defineEventHandler(async (event) => {
       };
     }
 
-    // Generate JWT token
-    const token = jwt.sign(
-      { userId: user._id, email: user.email },
-      JWT_SECRET,
-      { expiresIn: '24h' }
-    );
+    // Generate token and set cookie
+    const token = generateToken({
+      userId: user._id.toString(),
+      email: user.email
+    });
+    setAuthCookie(event, token);
 
     return {
       statusCode: 200,
       body: {
-        token,
         user: {
           id: user._id,
           email: user.email,
