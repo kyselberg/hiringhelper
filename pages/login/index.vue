@@ -33,7 +33,9 @@ const handleSubmit = async () => {
     const data = await response.json();
 
     if (!response.ok) {
-      throw new Error(data.message || 'Login failed');
+      // Handle specific error cases based on status code
+      error.value = data.message || 'Login failed';
+      return;
     }
 
     // Store auth data in the store
@@ -42,9 +44,15 @@ const handleSubmit = async () => {
 
     // Redirect to dashboard or stored redirect path
     const redirectPath = authStore.redirectPath || '/dashboard';
+    console.log(redirectPath);
     router.push(redirectPath);
   } catch (err: unknown) {
-    error.value = err instanceof Error ? err.message : 'Login failed';
+    // Handle network errors or JSON parsing errors
+    if (err instanceof TypeError && err.message.includes('Failed to fetch')) {
+      error.value = 'Network error. Please check your connection and try again.';
+    } else {
+      error.value = 'An unexpected error occurred. Please try again later.';
+    }
   } finally {
     isLoading.value = false;
   }

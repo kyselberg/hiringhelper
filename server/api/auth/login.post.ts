@@ -1,28 +1,68 @@
-import { defineEventHandler, readBody } from 'h3';
+import { createError, defineEventHandler, readBody } from 'h3';
 import { UserModel } from '../../models/user.model';
 import { generateToken, setAuthCookie } from '../../utils/auth';
 
-export default defineEventHandler(async (event) => {
+interface LoginRequestBody {
+  email: string;
+  password: string;
+}
+
+interface LoginResponse {
+  user: {
+    id: string;
+    email: string;
+    name: string;
+  };
+}
+
+export default defineEventHandler(async (event): Promise<LoginResponse> => {
   try {
-    const { email, password } = await readBody(event);
+    const body = await readBody(event);
+
+    // Validate request body
+    if (!body || typeof body !== 'object') {
+      throw createError({
+        statusCode: 400,
+        message: 'Invalid request body'
+      });
+    }
+
+    const { email, password } = body as LoginRequestBody;
+
+    // Validate required fields
+    if (!email || !password) {
+      throw createError({
+        statusCode: 400,
+        message: 'Email and password are required'
+      });
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      throw createError({
+        statusCode: 400,
+        message: 'Invalid email format'
+      });
+    }
 
     // Find user by email
     const user = await UserModel.findByEmail(email);
 
     if (!user || !user._id) {
-      return {
+      throw createError({
         statusCode: 401,
-        body: { message: 'Invalid email or password' }
-      };
+        message: 'Invalid email or password'
+      });
     }
 
     // Verify password
     const isValidPassword = await UserModel.comparePassword(user, password);
     if (!isValidPassword) {
-      return {
+      throw createError({
         statusCode: 401,
-        body: { message: 'Invalid email or password' }
-      };
+        message: 'Invalid email or password'
+      });
     }
 
     // Generate token and set cookie
@@ -32,21 +72,26 @@ export default defineEventHandler(async (event) => {
     });
     setAuthCookie(event, token);
 
+    // Return only success response
     return {
-      statusCode: 200,
-      body: {
-        user: {
-          id: user._id,
-          email: user.email,
-          name: user.name
-        }
+      user: {
+        id: user._id.toString(),
+        email: user.email,
+        name: user.name
       }
     };
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Login error:', error);
-    return {
+
+    // If it's already a H3 error, rethrow it
+    if (error && typeof error === 'object' && 'statusCode' in error) {
+      throw error;
+    }
+
+    // For other errors, create a new H3 error
+    throw createError({
       statusCode: 500,
-      body: { message: 'Internal server error' }
-    };
+      message: error instanceof Error ? error.message : 'Internal server error'
+    });
   }
 });

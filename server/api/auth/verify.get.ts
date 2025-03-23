@@ -1,8 +1,16 @@
-import { defineEventHandler, getHeader } from 'h3';
+import { createError, defineEventHandler, getHeader } from 'h3';
 import { UserModel } from '../../models/user.model';
 import { verifyToken } from '../../utils/auth';
 
-export default defineEventHandler(async (event) => {
+interface VerifyResponse {
+  user: {
+    id: string;
+    email: string;
+    name: string;
+  };
+}
+
+export default defineEventHandler(async (event): Promise<VerifyResponse> => {
   try {
     const authHeader = getHeader(event, 'Authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -17,7 +25,7 @@ export default defineEventHandler(async (event) => {
 
     // Get user data from database
     const user = await UserModel.findById(payload.userId);
-    if (!user) {
+    if (!user || !user._id) {
       throw createError({
         statusCode: 401,
         message: 'User not found'
@@ -26,15 +34,23 @@ export default defineEventHandler(async (event) => {
 
     return {
       user: {
-        id: user._id,
+        id: user._id.toString(),
         email: user.email,
         name: user.name
       }
     };
-  } catch (error) {
+  } catch (error: unknown) {
+    console.error('Token verification error:', error);
+
+    // If it's already a H3 error, rethrow it
+    if (error && typeof error === 'object' && 'statusCode' in error) {
+      throw error;
+    }
+
+    // For other errors, create a new H3 error
     throw createError({
       statusCode: 401,
-      message: 'Invalid or expired token'
+      message: error instanceof Error ? error.message : 'Invalid or expired token'
     });
   }
 });
