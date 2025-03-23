@@ -1,7 +1,6 @@
-import bcrypt from 'bcryptjs';
 import { defineEventHandler, readBody } from 'h3';
 import jwt from 'jsonwebtoken';
-import { User } from '../../models/user.model';
+import { UserModel } from '../../models/user.model';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
@@ -9,23 +8,10 @@ export default defineEventHandler(async (event) => {
   try {
     const { email, password, name } = await readBody(event);
 
-    // Check if user already exists
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      return {
-        statusCode: 400,
-        body: { message: 'User with this email already exists' }
-      };
-    }
-
-    // Hash password
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
-
     // Create new user
-    const user = await User.create({
+    const user = await UserModel.create({
       email,
-      password: hashedPassword,
+      password,
       name
     });
 
@@ -47,8 +33,38 @@ export default defineEventHandler(async (event) => {
         }
       }
     };
-  } catch (error) {
+  } catch (error: any) {
     console.error('Registration error:', error);
+
+    // Handle specific error cases
+    if (error.message === 'Email already exists') {
+      return {
+        statusCode: 400,
+        body: { message: 'User with this email already exists' }
+      };
+    }
+
+    if (error.message === 'Invalid email format') {
+      return {
+        statusCode: 400,
+        body: { message: 'Invalid email format' }
+      };
+    }
+
+    if (error.message === 'Password must be at least 8 characters long') {
+      return {
+        statusCode: 400,
+        body: { message: 'Password must be at least 8 characters long' }
+      };
+    }
+
+    if (error.message === 'Name must be between 2 and 50 characters') {
+      return {
+        statusCode: 400,
+        body: { message: 'Name must be between 2 and 50 characters' }
+      };
+    }
+
     return {
       statusCode: 500,
       body: { message: 'Internal server error' }

@@ -1,7 +1,6 @@
-import bcrypt from 'bcryptjs';
 import { defineEventHandler, readBody } from 'h3';
 import jwt from 'jsonwebtoken';
-import { User } from '../../models/user.model';
+import { UserModel } from '../../models/user.model';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
@@ -10,7 +9,10 @@ export default defineEventHandler(async (event) => {
     const { email, password } = await readBody(event);
 
     // Find user by email
-    const user = await User.findOne({ email });
+    const user = await UserModel.findByEmail(email);
+
+    console.log('user =>', user);
+
     if (!user) {
       return {
         statusCode: 401,
@@ -19,7 +21,7 @@ export default defineEventHandler(async (event) => {
     }
 
     // Verify password
-    const isValidPassword = await bcrypt.compare(password, user.password);
+    const isValidPassword = await UserModel.comparePassword(user, password);
     if (!isValidPassword) {
       return {
         statusCode: 401,
