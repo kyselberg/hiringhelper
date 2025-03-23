@@ -5,9 +5,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuthStore } from '@/stores/auth';
 import { ref } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 
 const router = useRouter();
+const route = useRoute();
 const authStore = useAuthStore();
 const email = ref('');
 const password = ref('');
@@ -24,6 +25,7 @@ const handleSubmit = async () => {
       headers: {
         'Content-Type': 'application/json',
       },
+      credentials: 'include',
       body: JSON.stringify({
         email: email.value,
         password: password.value,
@@ -38,13 +40,8 @@ const handleSubmit = async () => {
       return;
     }
 
-    // Store auth data in the store
-    authStore.setToken(data.body.token);
-    authStore.setUser(data.body.user);
-
-    // Redirect to dashboard or stored redirect path
-    const redirectPath = authStore.redirectPath || '/dashboard';
-    console.log(redirectPath);
+    // Redirect to the stored redirect path or dashboard
+    const redirectPath = route.query.redirect as string || '/dashboard';
     router.push(redirectPath);
   } catch (err: unknown) {
     // Handle network errors or JSON parsing errors

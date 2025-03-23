@@ -1,6 +1,6 @@
-import { createError, defineEventHandler, getHeader } from 'h3';
+import { createError, defineEventHandler } from 'h3';
 import { UserModel } from '../../models/user.model';
-import { verifyToken } from '../../utils/auth';
+import { getAuthCookie, verifyToken } from '../../utils/auth';
 
 interface VerifyResponse {
   user: {
@@ -12,15 +12,14 @@ interface VerifyResponse {
 
 export default defineEventHandler(async (event): Promise<VerifyResponse> => {
   try {
-    const authHeader = getHeader(event, 'Authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    const token = getAuthCookie(event);
+    if (!token) {
       throw createError({
         statusCode: 401,
-        message: 'No token provided'
+        message: 'No authentication token found'
       });
     }
 
-    const token = authHeader.split(' ')[1];
     const payload = verifyToken(token);
 
     // Get user data from database
@@ -39,18 +38,13 @@ export default defineEventHandler(async (event): Promise<VerifyResponse> => {
         name: user.name
       }
     };
-  } catch (error: unknown) {
-    console.error('Token verification error:', error);
-
-    // If it's already a H3 error, rethrow it
+  } catch (error) {
     if (error && typeof error === 'object' && 'statusCode' in error) {
       throw error;
     }
-
-    // For other errors, create a new H3 error
     throw createError({
       statusCode: 401,
-      message: error instanceof Error ? error.message : 'Invalid or expired token'
+      message: 'Invalid or expired token'
     });
   }
 });
